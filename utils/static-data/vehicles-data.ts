@@ -1,4 +1,4 @@
-export interface Vehicle {
+/* export interface Vehicle {
     id: number;
     type: string;
     route: string;
@@ -42,7 +42,7 @@ export const dummyVehicles: Vehicle[] = [
     },
     {
         id: 4,
-        type: "UV Express",
+        type: "UV",
         route: "Novaliches - Makati (Ayala)",
         location: "Novaliches Bayan",
         latitude: 14.7005,
@@ -52,7 +52,7 @@ export const dummyVehicles: Vehicle[] = [
     },
     {
         id: 5,
-        type: "UV Express",
+        type: "UV",
         route: "Novaliches - Ortigas",
         location: "Novaliches Bayan",
         latitude: 14.7062,
@@ -142,7 +142,7 @@ export const dummyVehicles: Vehicle[] = [
     },
     {
         id: 14,
-        type: "UV Express",
+        type: "UV",
         route: "SM North - Ortigas",
         location: "SM North",
         latitude: 14.7035,
@@ -152,7 +152,7 @@ export const dummyVehicles: Vehicle[] = [
     },
     {
         id: 15,
-        type: "UV Express",
+        type: "UV",
         route: "Caloocan - Makati (Ayala)",
         location: "Caloocan",
         latitude: 14.6568,
@@ -243,7 +243,7 @@ export const dummyVehicles: Vehicle[] = [
     },
     {
         id: 24,
-        type: "UV Express",
+        type: "UV",
         route: "Commonwealth - Ortigas",
         location: "Quezon City",
         latitude: 14.6775,
@@ -285,7 +285,7 @@ export const dummyVehicles: Vehicle[] = [
     },
     {
         id: 28,
-        type: "UV Express",
+        type: "UV",
         route: "Makati - Fairview",
         location: "Makati",
         latitude: 14.5531,
@@ -369,7 +369,7 @@ export const dummyVehicles: Vehicle[] = [
     },
     {
         id: 36,
-        type: "UV Express",
+        type: "UV",
         route: "Pasay - Cubao",
         location: "Pasay",
         latitude: 14.5410,
@@ -387,4 +387,76 @@ export const dummyVehicles: Vehicle[] = [
         eta: "50 mins",
         fare: "₱450+"
     }
+];
+ */
+
+import { Category, Trip, Vehicle } from "@/types/puv-types";
+import { Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+
+export const INITIAL_REGION = {
+    latitude: 14.5995,
+    longitude: 120.9842,
+    latitudeDelta: 0.02,
+    longitudeDelta: 0.02 * (width / height),
+};
+
+export const categories: Category[] = [
+    { id: 'all', label: 'All', icon: 'apps' },
+    { id: 'bus', label: 'Bus', icon: 'bus' },
+    { id: 'jeepney', label: 'Jeepney', icon: 'car' },
+    { id: 'van', label: 'Van', icon: 'car-sport' },
+];
+
+export const dummyTrips: Trip[] = [
+    {
+        id: 1,
+        type: 'bus',
+        name: 'Route 1: Manila - Quezon City',
+        departure: '6:00 AM',
+        arrival: '7:30 AM',
+        price: '₱50',
+        seatsAvailable: 10,
+        route: 'Manila to Quezon City',
+        vehicleId: 'BUS-001',
+        stops: ['Manila Central', 'Quiapo', 'Cubao', 'North EDSA'],
+    },
+    {
+        id: 2,
+        type: 'jeepney',
+        name: 'Route 2: Makati - Pasay',
+        departure: '7:00 AM',
+        arrival: '7:45 AM',
+        price: '₱20',
+        seatsAvailable: 5,
+        route: 'Makati to Pasay',
+        vehicleId: 'JEP-001',
+        stops: ['Ayala', 'Gil Puyat', 'Taft Avenue', 'Mall of Asia'],
+    },
+];
+
+export const dummyVehicles: Vehicle[] = [
+    {
+        id: 1,
+        type: 'Bus',
+        route: 'Manila - QC',
+        latitude: 14.6091,
+        longitude: 121.0223,
+        currentPassengers: 15,
+        maxCapacity: 50,
+        nextStop: 'Cubao',
+        estimatedArrival: '5 mins',
+    },
+    {
+        id: 2,
+        type: 'Jeepney',
+        route: 'Makati - Pasay',
+        latitude: 14.5547,
+        longitude: 121.0244,
+        currentPassengers: 8,
+        maxCapacity: 16,
+        nextStop: 'Ayala',
+        estimatedArrival: '3 mins',
+    },
 ];

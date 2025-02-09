@@ -80,6 +80,7 @@ const SearchScreen = ({ onSelectLocation }: any) => {
                 )}
                 ListEmptyComponent={<Text style={styles.noResults}>No results found</Text>}
             />
+
         </View>
     );
 };

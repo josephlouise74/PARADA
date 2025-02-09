@@ -1,279 +1,293 @@
-import SearchScreen from '@/components/SearchScreen';
-import SeeAllNearbyVehiclesScreen from '@/components/SeeAllNearbyVehicles';
-import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
-import {
-  Modal,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-  RefreshControl
-} from "react-native";
-import MapView, { Marker } from "react-native-maps";
-import '../../global.css'
+// app/index.tsx
+
+import ProfileScreen from '@/components/ProfileUser';
+import { Trip, Vehicle } from '@/types/puv-types';
+import { categories, dummyTrips, dummyVehicles, INITIAL_REGION } from '@/utils/static-data/vehicles-data';
+import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useState } from 'react';
+import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import MapView, { Marker, Region } from 'react-native-maps';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
-  const [activeTab, setActiveTab] = useState('all');
-  const [isSearchVisible, setIsSearchVisible] = useState(false);
-  const [seeAllVehicles, setSeeAllVehicles] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedFilters, setSelectedFilters] = useState({
-    maxFare: null,
-    preferredType: null,
-    accessibility: false,
-  });
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
+  const [mapRegion, setMapRegion] = useState<Region>(INITIAL_REGION);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Enhanced dummy data with more relevant information
-  const dummyVehicles = [
-    {
-      id: 1,
-      type: 'Jeepney',
-      route: 'Guadalupe - Pateros',
-      eta: '5 mins',
-      fare: '₱15',
-      capacity: '10/16',
-      accessibility: true,
-      lastUpdated: '2 mins ago',
-      driverRating: 4.5
-    },
-    {
-      id: 2,
-      type: 'Bus',
-      route: 'Alabang - Navotas',
-      eta: '10 mins',
-      fare: '₱45',
-      capacity: '25/40',
-      accessibility: true,
-      lastUpdated: '1 min ago',
-      driverRating: 4.8
-    },
-    {
-      id: 3,
-      type: 'UV Express',
-      route: 'SM North - Fairview',
-      eta: '3 mins',
-      fare: '₱35',
-      capacity: '8/10',
-      accessibility: false,
-      lastUpdated: '5 mins ago',
-      driverRating: 4.2
-    }
-  ];
 
-  const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    // Simulate data refresh
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 2000);
+  const [isProfileUser, setIsProfileUser] = useState(false)
+
+  const router = useRouter();
+
+  useEffect(() => {
+    requestLocationPermission();
   }, []);
 
-  const handleLocationSelect = (location: any) => {
-    console.log('Selected location:', location);
-    setIsSearchVisible(false);
+  const requestLocationPermission = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location permission is required to show nearby vehicles.');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      setUserLocation(location);
+      setMapRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: INITIAL_REGION.latitudeDelta,
+        longitudeDelta: INITIAL_REGION.longitudeDelta,
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to get location');
+    }
   };
 
-  if (seeAllVehicles) {
-    return <SeeAllNearbyVehiclesScreen onShowUI={setSeeAllVehicles} />;
+  const handleBooking = (trip: Trip) => {
+    Alert.alert(
+      'Confirm Booking',
+      `Would you like to book a ticket for ${trip.name}?\nPrice: ${trip.price}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Book',
+          onPress: () => {
+            Alert.alert('Success', 'Ticket booked successfully!');
+          },
+        },
+      ]
+    );
+  };
+
+  const filteredTrips = dummyTrips.filter(
+    trip => (activeCategory === 'all' || trip.type === activeCategory) &&
+      (searchQuery === '' || trip.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+
+  if (isProfileUser) {
+    return <ProfileScreen onGoBack={() => setIsProfileUser(false)} />;
   }
 
   return (
-    <>
-      <ScrollView
-        className="flex-1 bg-gray-50"
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Header Section */}
-        <View className="flex-row justify-between items-center p-5 pt-10 bg-white">
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <StatusBar style="dark" />
+
+      {/* Header with Search */}
+      <View className="bg-white shadow-sm">
+        <View className="px-4 pt-4 pb-2 flex-row justify-between items-center">
           <View>
-            <Text className="text-2xl font-bold text-indigo-900">Good Morning!</Text>
-            <View className="flex-row items-center mt-1">
-              <Ionicons name="location" size={16} color="#4A90E2" />
-              <Text className="text-sm text-gray-600 ml-1">Current Location</Text>
-            </View>
+            <Text className="text-2xl font-bold text-gray-900">PUV Tickets</Text>
+            <Text className="text-sm text-gray-600">Book your ride easily</Text>
           </View>
-          <TouchableOpacity className="p-1">
-            <Ionicons name="person-circle" size={40} color="#4A90E2" />
-          </TouchableOpacity>
+          <View className="flex-row gap-4 items-center">
+            <TouchableOpacity /* onPress={() => router.push('/notifications')} */>
+              <Ionicons name="notifications-outline" size={24} color="#4A90E2" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setIsProfileUser(true)} >
+              <Ionicons name="person-circle" size={28} color="#4A90E2" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Search Bar */}
-        <TouchableOpacity
-          className="flex-row bg-white p-4 rounded-xl mx-5 mt-5 items-center shadow-sm"
-          onPress={() => setIsSearchVisible(true)}
+        <View className="px-4 py-3">
+          <View className="flex-row items-center bg-gray-100 px-4 py-2 rounded-xl">
+            <Ionicons name="search" size={20} color="#666" />
+            <TextInput
+              className="flex-1 ml-2 text-base text-gray-900"
+              placeholder="Where are you going?"
+              placeholderTextColor="#666"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            <TouchableOpacity /* onPress={() => router.push('/search')} */>
+              <Ionicons name="options-outline" size={20} color="#666" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Categories */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="px-2 py-2"
         >
-          <Ionicons name="search" size={20} color="#666" />
-          <Text className="ml-3 text-gray-600 text-base">Where would you like to go?</Text>
-        </TouchableOpacity>
-
-        {/* Quick Actions */}
-        <View className="flex-row justify-around p-3 mb-5">
-          <TouchableOpacity className="items-center">
-            <View className="w-12 h-12 rounded-xl bg-blue-50 justify-center items-center mb-2">
-              <Ionicons name="bus" size={24} color="#4A90E2" />
-            </View>
-            <Text className="text-xs font-medium text-gray-700">Book Ride</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity className="items-center">
-            <View className="w-12 h-12 rounded-xl bg-green-50 justify-center items-center mb-2">
-              <Ionicons name="time" size={24} color="#43A047" />
-            </View>
-            <Text className="text-xs font-medium text-gray-700">History</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity className="items-center">
-            <View className="w-12 h-12 rounded-xl bg-orange-50 justify-center items-center mb-2">
-              <Ionicons name="star" size={24} color="#FF9800" />
-            </View>
-            <Text className="text-xs font-medium text-gray-700">Favorites</Text>
-          </TouchableOpacity>
-
-          {/* New Emergency Button */}
-          <TouchableOpacity className="items-center">
-            <View className="w-12 h-12 rounded-xl bg-red-50 justify-center items-center mb-2">
-              <Ionicons name="warning" size={24} color="#DC2626" />
-            </View>
-            <Text className="text-xs font-medium text-gray-700">Emergency</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Map Section */}
-        <View className="mx-5 rounded-xl overflow-hidden bg-white shadow-sm">
-          <View className="flex-row justify-between items-center p-4">
-            <Text className="text-lg font-bold text-indigo-900">Nearby Vehicles</Text>
-            <TouchableOpacity onPress={() => setSeeAllVehicles(true)}>
-              <Text className="text-sm font-medium text-blue-500">See All</Text>
-            </TouchableOpacity>
-          </View>
-          <MapView
-            className="h-48"
-            initialRegion={{
-              latitude: 14.5995,
-              longitude: 120.9842,
-              latitudeDelta: 0.02,
-              longitudeDelta: 0.02,
-            }}
-          >
-            {dummyVehicles.map((vehicle) => (
-              <Marker
-                key={vehicle.id}
-                coordinate={{ latitude: 14.5995 + (Math.random() - 0.5) * 0.01, longitude: 120.9842 + (Math.random() - 0.5) * 0.01 }}
-                title={`${vehicle.type} - ${vehicle.route}`}
+          {categories.map((category) => (
+            <TouchableOpacity
+              key={category.id}
+              onPress={() => setActiveCategory(category.id)}
+              className={`mx-2 px-4 py-2 rounded-full flex-row items-center ${activeCategory === category.id ? 'bg-blue-500' : 'bg-gray-100'
+                }`}
+            >
+              <Ionicons
+                name={category.icon}
+                size={16}
+                color={activeCategory === category.id ? '#FFF' : '#666'}
               />
-            ))}
-          </MapView>
+              <Text className={`ml-2 font-medium ${activeCategory === category.id ? 'text-white' : 'text-gray-700'
+                }`}>
+                {category.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      <ScrollView className="flex-1 mb-[13%]">
+        {/* Map Section */}
+        <View className="mt-6 mx-4">
+
+          <View className='bg-white rounded-2xl shadow-md overflow-hidden'>
+            <View className="p-4 border-b border-gray-100">
+              <View className="flex-row justify-between items-center">
+                <View>
+                  <Text className="text-lg font-semibold text-gray-900">Nearby Vehicles</Text>
+                  <Text className="text-sm text-gray-500 mt-1">Find available PUVs around you</Text>
+                </View>
+                <TouchableOpacity
+                  className="px-3 py-2 bg-blue-50 rounded-lg"
+                /*   onPress={() => setSeeAllVehicles(true)} */
+                >
+                  <Text className="text-sm font-medium text-blue-600">See All</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+
+            <View style={{ width: '100%', height: 300, borderRadius: 10, overflow: 'hidden' }}>
+              <MapView
+                style={{ flex: 1 }}
+                region={mapRegion} // Ensure this is dynamic
+                showsUserLocation
+                showsMyLocationButton
+              >
+                {dummyVehicles.map((vehicle) => (
+                  <Marker
+                    key={vehicle.id}
+                    coordinate={{
+                      latitude: vehicle.latitude || 14.5995 + (Math.random() - 0.5) * 0.01,
+                      longitude: vehicle.longitude || 120.9842 + (Math.random() - 0.5) * 0.01,
+                    }}
+                    title={`${vehicle.type} - ${vehicle.route}`}
+                  />
+                ))}
+              </MapView>
+            </View>
+          </View>
         </View>
 
-        {/* Available Vehicles */}
-        <View className="p-5">
+
+        {/* Available Trips Section */}
+        {/* Available Trips Section */}
+        <View className="mt-6 mx-4">
+          {/* Section Header */}
           <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-lg font-bold text-indigo-900">Available Vehicles</Text>
+            <View>
+              <Text className="text-xl font-bold text-gray-900">Available Trips</Text>
+              <Text className="text-sm text-gray-500">Find your next ride</Text>
+            </View>
             <TouchableOpacity
-              className="flex-row items-center"
-              onPress={() => setShowFilters(!showFilters)}
+              className="px-3 py-2 bg-blue-50 rounded-lg"
+            /*   onPress={() => router.push('/all-trips')} */
             >
-              <Ionicons name="filter" size={20} color="#4A90E2" />
-              <Text className="ml-2 text-blue-500">Filters</Text>
+              <Text className="text-sm font-medium text-blue-600">See All</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Filter Options */}
-          {showFilters && (
-            <View className="bg-white p-4 rounded-xl mb-4 shadow-sm">
-              <Text className="font-bold mb-2">Filter Options:</Text>
-              <TouchableOpacity
-                className="flex-row items-center py-2"
-                onPress={() => setSelectedFilters({ ...selectedFilters, accessibility: !selectedFilters.accessibility })}
-              >
-                <Ionicons
-                  name={selectedFilters.accessibility ? "checkbox" : "square-outline"}
-                  size={20}
-                  color="#4A90E2"
-                />
-                <Text className="ml-2">Wheelchair Accessible</Text>
-              </TouchableOpacity>
-              {/* Add more filter options as needed */}
-            </View>
-          )}
-
-          {/* Tabs */}
-          <View className="flex-row bg-white rounded-xl p-1 mb-4">
-            {['all', 'jeepney', 'bus', 'uv'].map((tab) => (
-              <TouchableOpacity
-                key={tab}
-                className={`flex-1 py-2 px-3 rounded-lg ${activeTab === tab ? 'bg-blue-500' : ''}`}
-                onPress={() => setActiveTab(tab)}
-              >
-                <Text className={`text-center text-sm font-medium ${activeTab === tab ? 'text-white' : 'text-gray-600'}`}>
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Vehicle Cards */}
-          {dummyVehicles.map(vehicle => (
+          {/* Trips List */}
+          {filteredTrips.map((trip) => (
             <TouchableOpacity
-              key={vehicle.id}
-              className="flex-row bg-white rounded-xl p-4 mb-3 shadow-sm"
+              key={trip.id}
+              className="bg-white p-4 rounded-2xl mb-4 shadow-sm"
+              onPress={() => handleBooking(trip)}
             >
-              <View className="flex-1">
-                <View className="flex-row items-center mb-1">
-                  <Ionicons name="bus" size={24} color="#4A90E2" />
-                  <Text className="text-base font-bold text-gray-800 ml-2">{vehicle.type}</Text>
-                  {vehicle.accessibility && (
-                    <View className="ml-2 bg-blue-100 px-2 py-1 rounded">
-                      <Ionicons name="accessibility" size={16} color="#4A90E2" />
-                    </View>
-                  )}
+              {/* Header with Vehicle Info */}
+              <View className="flex-row items-center mb-3">
+                <View className="bg-blue-100 p-2 rounded-full">
+                  <Ionicons
+                    name={trip.type === 'bus' ? 'bus' : 'car'}
+                    size={20}
+                    color="#1D4ED8"
+                  />
                 </View>
-                <Text className="text-sm text-gray-600 mb-1">{vehicle.route}</Text>
-                <View className="flex-row justify-between items-center mr-3">
-                  <Text className="text-sm text-gray-600">
-                    <Ionicons name="time-outline" size={16} color="#666" /> {vehicle.eta}
-                  </Text>
-                  <Text className="text-sm text-gray-600">
-                    <Ionicons name="people-outline" size={16} color="#666" /> {vehicle.capacity}
-                  </Text>
-                  <Text className="text-base font-bold text-blue-500">{vehicle.fare}</Text>
+                <View className="ml-3 flex-1">
+                  <Text className="text-lg font-bold text-gray-900">{trip.name}</Text>
+                  <Text className="text-sm text-gray-500">Vehicle ID: {trip.vehicleId}</Text>
+                  <Text className="text-sm text-gray-500">Type: <Text className="text-green-600">{trip.type}</Text></Text>
                 </View>
-                <View className="flex-row justify-between items-center mt-2">
-                  <Text className="text-xs text-gray-500">Updated {vehicle.lastUpdated}</Text>
-                  <View className="flex-row items-center">
-                    <Ionicons name="star" size={16} color="#FFB800" />
-                    <Text className="text-xs text-gray-600 ml-1">{vehicle.driverRating}</Text>
+                <View className="items-end">
+                  <Text className="text-xl font-bold text-blue-600">{trip.price}</Text>
+                  <View className="flex-row items-center mt-1">
+                    <Ionicons name="person" size={14} color="#059669" />
+                    <Text className="text-green-600 ml-1 font-medium">
+                      {trip.seatsAvailable} seats left
+                    </Text>
                   </View>
                 </View>
               </View>
-              <TouchableOpacity className="bg-blue-500 px-5 py-2 rounded-lg justify-center">
-                <Text className="text-white font-bold">Book</Text>
+
+              {/* Route and Time Info */}
+              <View className="bg-gray-50 p-3 rounded-xl mb-3">
+                <View className="flex-row items-center justify-between mb-2">
+                  <View className="flex-row items-center flex-1">
+                    <Ionicons name="time-outline" size={18} color="#4B5563" />
+                    <View className="ml-2">
+                      <Text className="text-sm font-medium text-gray-700">Departure</Text>
+                      <Text className="text-base text-gray-900">{trip.departure}</Text>
+                    </View>
+                  </View>
+                  <View className="w-8 h-[1px] bg-gray-300" />
+                  <View className="flex-row items-center flex-1 justify-end">
+                    <View className="mr-2 items-end">
+                      <Text className="text-sm font-medium text-gray-700">Arrival</Text>
+                      <Text className="text-base text-gray-900">{trip.arrival}</Text>
+                    </View>
+                    <Ionicons name="flag-outline" size={18} color="#4B5563" />
+                  </View>
+                </View>
+              </View>
+
+              {/* Stops Information */}
+              <View className="bg-gray-50 p-3 rounded-xl">
+                <View className="flex-row items-center mb-2">
+                  <Ionicons name="map-outline" size={18} color="#4B5563" />
+                  <Text className="ml-2 font-medium text-gray-700">
+                    Route Stops ({trip.stops.length})
+                  </Text>
+                </View>
+                <View className="ml-5">
+                  {trip.stops.map((stop, index) => (
+                    <View key={stop} className="flex-row items-center">
+                      <View className="w-2 h-2 rounded-full bg-blue-500 mr-2" />
+                      <Text className="text-gray-600">{stop}</Text>
+                      {index !== trip.stops.length - 1 && (
+                        <View className="w-[1px] h-4 bg-gray-300 absolute left-1 top-4" />
+                      )}
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {/* Book Now Button */}
+              <TouchableOpacity
+                className="mt-4 bg-blue-600 py-3 rounded-xl"
+                onPress={() => handleBooking(trip)}
+              >
+                <Text className="text-white text-center font-semibold">
+                  Book Now
+                </Text>
               </TouchableOpacity>
             </TouchableOpacity>
           ))}
         </View>
       </ScrollView>
-
-      {/* Search Modal */}
-      <Modal
-        visible={isSearchVisible}
-        animationType="slide"
-        onRequestClose={() => setIsSearchVisible(false)}
-      >
-        <View className="flex-1 bg-gray-50">
-          <TouchableOpacity
-            className="p-4"
-            onPress={() => setIsSearchVisible(false)}
-          >
-            <Ionicons name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
-          <SearchScreen onSelectLocation={handleLocationSelect} />
-        </View>
-      </Modal>
-    </>
+    </SafeAreaView >
   );
 }

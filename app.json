@@ -24,6 +24,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-location",
       [
         "expo-splash-screen",
         {
@@ -34,6 +35,7 @@
         }
       ]
     ],
+    "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location.",
     "experiments": {
       "typedRoutes": true
     }
