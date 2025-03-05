@@ -1,182 +1,374 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useState, useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import {
     Alert,
-    Image,
     Modal,
-    Platform,
     ScrollView,
-    StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
-    TextInput,
-} from "react-native";
-import * as ImagePicker from 'expo-image-picker';
+    Image,
+    StatusBar,
+    KeyboardAvoidingView,
+    Platform,
+} from 'react-native';
 import { z } from 'zod';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 
-// Form schema
+// Improved profile schema with better validation
 const profileSchema = z.object({
     fullName: z.string().min(2, 'Name must be at least 2 characters'),
     email: z.string().email('Invalid email format'),
-    phone: z.string().min(10, 'Phone number must be at least 10 digits'),
-    homeAddress: z.string().min(5, 'Address must be at least 5 characters'),
-    workAddress: z.string().optional(),
+    phone: z.string().min(10, 'Phone number must be at least 10 digits').regex(/^\d+$/, 'Must contain only digits'),
+    username: z.string().min(3, 'Username must be at least 3 characters').regex(/^[a-zA-Z0-9_]+$/, 'Only letters, numbers and underscores allowed'),
+    location: z.string().optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
-interface ProfileScreenProps {
+type ProfileScreenProps = {
     onGoBack: () => void;
-}
+    // You can add more props as needed, like user data for initial values
+};
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ onGoBack }) => {
     const [isEditMode, setIsEditMode] = useState(false);
-    const [profileImage, setProfileImage] = useState<string | null>(null);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [profileImage, setProfileImage] = useState<string | null>(null);
+    const [userLocation, setUserLocation] = useState<string>('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const { control, handleSubmit, formState: { errors } } = useForm<ProfileFormData>({
+    // Initialize form with React Hook Form
+    const {
+        control,
+        handleSubmit,
+        setValue,
+        reset,
+        formState: { errors, isDirty }
+    } = useForm<ProfileFormData>({
         resolver: zodResolver(profileSchema),
+        defaultValues: {
+            fullName: 'John Doe', // Sample default values, replace with actual user data
+            email: 'john.doe@example.com',
+            phone: '1234567890',
+            username: 'johndoe',
+            location: '',
+        }
     });
 
-    const onSubmit = async (data: ProfileFormData) => {
+    // Fetch location on component mount
+    useEffect(() => {
+        requestLocationPermission();
+
+        // You would typically fetch user profile here and populate the form
+        // This is a placeholder for that logic
+        const fetchUserProfile = async () => {
+            setIsLoading(true);
+            try {
+                // Fetch user data and set form values
+                // const userData = await api.getUserProfile();
+                // reset(userData);
+            } catch (error) {
+                Alert.alert('Error', 'Failed to load profile data');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchUserProfile();
+    }, []);
+
+    const requestLocationPermission = async () => {
         try {
-            console.log('Form data:', data);
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert(
+                    'Permission Denied',
+                    'Location permission is required to show your current location.',
+                    [{ text: 'OK' }]
+                );
+                return;
+            }
+
+            const location = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+            });
+
+            const address = await Location.reverseGeocodeAsync({
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+            });
+
+            if (address && address[0]) {
+                const locationString = [
+                    address[0].street,
+                    address[0].city,
+                    address[0].region
+                ].filter(Boolean).join(', ');
+
+                setUserLocation(locationString);
+                setValue('location', locationString);
+            }
+        } catch (error) {
+            console.error('Location error:', error);
+            Alert.alert('Error', 'Failed to get your current location');
+        }
+    };
+
+    const pickImage = async () => {
+        if (!isEditMode) return;
+
+        try {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+            if (status !== 'granted') {
+                Alert.alert(
+                    'Permission Required',
+                    'Please grant camera roll permissions to upload your profile picture.',
+                    [{ text: 'OK' }]
+                );
+                return;
+            }
+
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets && result.assets[0]) {
+                setProfileImage(result.assets[0].uri);
+            }
+        } catch (error) {
+            console.error('Image picker error:', error);
+            Alert.alert('Error', 'Failed to pick image');
+        }
+    };
+
+    const handleCancel = () => {
+        // Reset form to original values
+        reset();
+        setIsEditMode(false);
+    };
+
+    const onSubmit = async (data: ProfileFormData) => {
+        setIsLoading(true);
+        try {
+            // Simulating API call
+            console.log('Submitting form data:', data);
+            console.log('Profile image:', profileImage);
+
+            // Here you would typically update the profile via API
+            // await api.updateProfile({ ...data, profileImage });
+
             setIsEditMode(false);
             Alert.alert('Success', 'Profile updated successfully!');
         } catch (error) {
-            Alert.alert('Error', 'Failed to update profile');
+            Alert.alert('Error', 'Failed to update profile. Please try again.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    const handleImagePick = async () => {
-        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!permissionResult.granted) {
-            Alert.alert('Permission Required', 'Please allow access to your photo library');
-            return;
-        }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 1,
-        });
-
-        if (!result.canceled) {
-            setProfileImage(result.assets[0].uri);
-        }
+    const handleLogout = () => {
+        // Implementation of actual logout logic would go here
+        console.log('User logged out');
+        setShowLogoutConfirm(false);
+        // Navigate to login screen or perform other logout operations
     };
 
-    const renderFormField = (name: keyof ProfileFormData, label: string, icon: keyof typeof Ionicons.glyphMap, placeholder: string) => (
+    const renderFormField = (
+        name: keyof ProfileFormData,
+        label: string,
+        icon: keyof typeof Ionicons.glyphMap,
+        placeholder: string,
+        keyboardType: any = 'default',
+        editable: boolean = true
+    ) => (
         <Controller
             control={control}
             name={name}
-            render={({ field: { onChange, value } }) => (
-                <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>{label}</Text>
-                    <View style={[styles.inputWrapper, errors[name] && styles.inputError]}>
-                        <Ionicons name={icon} size={20} color="#4A90E2" style={styles.inputIcon} />
+            render={({ field: { onChange, onBlur, value } }) => (
+                <View className="mb-5">
+                    <Text className="text-sm font-medium text-gray-700 mb-1">{label}</Text>
+                    <View className={`flex-row items-center border ${errors[name] ? 'border-red-500' : 'border-gray-200'
+                        } bg-gray-50 px-4 py-3 rounded-xl ${!isEditMode || !editable ? 'opacity-80' : ''
+                        }`}>
+                        <Ionicons name={icon} size={20} color="#4A90E2" />
                         <TextInput
-                            style={styles.input}
+                            className="flex-1 ml-3 text-base text-gray-800"
                             onChangeText={onChange}
+                            onBlur={onBlur}
                             value={value}
                             placeholder={placeholder}
-                            editable={isEditMode}
-                            placeholderTextColor="#999"
+                            placeholderTextColor="#9CA3AF"
+                            editable={isEditMode && editable}
+                            keyboardType={keyboardType}
+                            autoCapitalize={name === 'email' || name === 'username' ? 'none' : 'words'}
+                            autoCorrect={false}
                         />
                     </View>
-                    {errors[name] && <Text style={styles.errorText}>{errors[name]?.message}</Text>}
+                    {errors[name] && (
+                        <Text className="text-red-500 text-xs mt-1">{errors[name]?.message}</Text>
+                    )}
                 </View>
             )}
         />
     );
 
-    const renderQuickActionButton = (icon: keyof typeof Ionicons.glyphMap, label: string, color: string, bgColor: string, onPress: () => void) => (
-        <TouchableOpacity style={styles.actionButton} onPress={onPress}>
-            <View style={[styles.actionIcon, { backgroundColor: bgColor }]}>
-                <Ionicons name={icon} size={24} color={color} />
-            </View>
-            <Text style={styles.actionText}>{label}</Text>
-        </TouchableOpacity>
-    );
-
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={onGoBack} activeOpacity={0.7}>
-                        <Ionicons name="arrow-back-outline" size={28} color="#4A90E2" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Profile</Text>
-                    <TouchableOpacity onPress={() => isEditMode ? handleSubmit(onSubmit)() : setIsEditMode(true)} style={styles.editButton}>
-                        <Text style={styles.editButtonText}>{isEditMode ? 'Save' : 'Edit'}</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Profile Image */}
-                <View style={styles.profileImageSection}>
-                    <TouchableOpacity onPress={handleImagePick} disabled={!isEditMode} style={styles.imageContainer}>
-                        {profileImage ? (
-                            <Image source={{ uri: profileImage }} style={styles.profileImage} />
+        <SafeAreaView className="flex-1 bg-gray-50">
+            <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                className="flex-1"
+            >
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
+                    className="flex-1"
+                >
+                    {/* Header */}
+                    <View className="bg-white py-4 flex-row justify-between items-center rounded-xl mb-6 px-4 mt-2 shadow-sm">
+                        <TouchableOpacity onPress={onGoBack} className="p-2">
+                            <Ionicons name="arrow-back" size={24} color="#4A90E2" />
+                        </TouchableOpacity>
+                        <Text className="text-xl font-bold text-gray-900">My Profile</Text>
+                        {isEditMode ? (
+                            <View className="flex-row">
+                                <TouchableOpacity
+                                    onPress={handleCancel}
+                                    className="mr-3 px-3 py-2"
+                                >
+                                    <Text className="text-gray-600 font-medium">Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={handleSubmit(onSubmit)}
+                                    className="bg-blue-500 px-4 py-2 rounded-lg"
+                                    disabled={isLoading || !isDirty}
+                                >
+                                    <Text className="text-white font-medium">
+                                        {isLoading ? 'Saving...' : 'Save'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
                         ) : (
-                            <View style={styles.profileImagePlaceholder}>
-                                <Ionicons name="person" size={60} color="#4A90E2" />
-                            </View>
-                        )}
-                        {isEditMode && (
-                            <View style={styles.editImageButton}>
-                                <Ionicons name="camera" size={20} color="#FFF" />
-                            </View>
-                        )}
-                    </TouchableOpacity>
-                </View>
-
-                {/* Form */}
-                <View style={styles.formContainer}>
-                    {renderFormField("fullName", "Full Name", "person-outline", "Enter your full name")}
-                    {renderFormField("email", "Email", "mail-outline", "Enter your email")}
-                    {renderFormField("phone", "Phone", "call-outline", "Enter your phone number")}
-                    {renderFormField("homeAddress", "Home Address", "home-outline", "Enter your home address")}
-                    {renderFormField("workAddress", "Work Address", "business-outline", "Enter your work address")}
-                </View>
-
-                {/* Quick Actions */}
-                <View style={styles.quickActions}>
-                    {renderQuickActionButton("notifications-outline", "Notifications", "#4A90E2", "#E3F2FD", () => { })}
-                    {renderQuickActionButton("shield-checkmark-outline", "Privacy", "#43A047", "#E8F5E9", () => { })}
-                    {renderQuickActionButton("settings-outline", "Settings", "#FF9800", "#FFF3E0", () => { })}
-                </View>
-
-                {/* Logout Button */}
-                <TouchableOpacity style={styles.logoutButton} onPress={() => setShowLogoutConfirm(true)}>
-                    <Ionicons name="log-out-outline" size={24} color="#FF4444" />
-                    <Text style={styles.logoutText}>Logout</Text>
-                </TouchableOpacity>
-
-                {/* Bottom Spacing */}
-                <View style={styles.bottomSpacing} />
-            </ScrollView>
-
-            {/* Logout Modal */}
-            <Modal visible={showLogoutConfirm} transparent={true} animationType="fade" statusBarTranslucent>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Logout Confirmation</Text>
-                        <Text style={styles.modalText}>Are you sure you want to logout?</Text>
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={() => setShowLogoutConfirm(false)}>
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            <TouchableOpacity
+                                onPress={() => setIsEditMode(true)}
+                                className="bg-blue-500 px-4 py-2 rounded-lg"
+                            >
+                                <Text className="text-white font-medium">Edit</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.modalButton, styles.confirmButton]} onPress={() => {
-                                setShowLogoutConfirm(false);
-                                // Handle logout
-                            }}>
-                                <Text style={styles.confirmButtonText}>Logout</Text>
+                        )}
+                    </View>
+
+                    {/* Profile Image */}
+                    <View className="items-center mb-8">
+                        <TouchableOpacity
+                            onPress={pickImage}
+                            className="relative"
+                            disabled={!isEditMode}
+                        >
+                            <View className="h-32 w-32 rounded-full bg-white shadow-md overflow-hidden border-2 border-gray-100">
+                                {profileImage ? (
+                                    <Image
+                                        source={{ uri: profileImage }}
+                                        className="h-32 w-32"
+                                        resizeMode="cover"
+                                    />
+                                ) : (
+                                    <View className="h-32 w-32 bg-gray-100 items-center justify-center">
+                                        <Ionicons name="person" size={60} color="#9CA3AF" />
+                                    </View>
+                                )}
+                            </View>
+                            {isEditMode && (
+                                <View className="absolute bottom-0 right-0 bg-blue-500 p-2 rounded-full border-2 border-white shadow-sm">
+                                    <Ionicons name="camera" size={18} color="white" />
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                        {isEditMode && (
+                            <Text className="text-blue-500 text-sm mt-2 font-medium">
+                                Tap to change photo
+                            </Text>
+                        )}
+                    </View>
+
+                    {/* Form */}
+                    <View className="bg-white p-5 rounded-2xl shadow-sm mb-6">
+                        <Text className="text-lg font-bold text-gray-800 mb-4">Personal Information</Text>
+                        {renderFormField('fullName', 'Full Name', 'person', 'Enter your full name')}
+                        {renderFormField('email', 'Email Address', 'mail', 'Enter your email', 'email-address')}
+                        {renderFormField('phone', 'Phone Number', 'call', 'Enter your phone number', 'phone-pad')}
+                        {renderFormField('username', 'Username', 'at', 'Enter your username')}
+                        {renderFormField('location', 'Current Location', 'location', userLocation || 'Detecting location...', 'default', false)}
+                    </View>
+
+                    {/* Account Actions */}
+                    <View className="bg-white p-5 rounded-2xl shadow-sm mb-6">
+                        <Text className="text-lg font-bold text-gray-800 mb-4">Account</Text>
+
+                        <TouchableOpacity
+                            className="flex-row items-center py-3 border-b border-gray-100"
+                            onPress={() => Alert.alert('Info', 'Change password functionality would go here')}
+                        >
+                            <Ionicons name="key-outline" size={20} color="#4A90E2" />
+                            <Text className="ml-3 text-gray-800 font-medium">Change Password</Text>
+                            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" style={{ marginLeft: 'auto' }} />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            className="flex-row items-center py-3 border-b border-gray-100"
+                            onPress={() => Alert.alert('Info', 'Privacy settings would go here')}
+                        >
+                            <Ionicons name="shield-outline" size={20} color="#4A90E2" />
+                            <Text className="ml-3 text-gray-800 font-medium">Privacy Settings</Text>
+                            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" style={{ marginLeft: 'auto' }} />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            className="flex-row items-center py-3"
+                            onPress={() => setShowLogoutConfirm(true)}
+                        >
+                            <Ionicons name="log-out-outline" size={20} color="#FF4444" />
+                            <Text className="ml-3 text-red-600 font-medium">Logout</Text>
+                        </TouchableOpacity>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
+
+            {/* Logout Confirmation Modal */}
+            <Modal visible={showLogoutConfirm} transparent animationType="fade">
+                <View className="flex-1 bg-black/50 items-center justify-center">
+                    <View className="bg-white p-6 rounded-2xl w-4/5 max-w-sm m-4 shadow-lg">
+                        <View className="items-center mb-5">
+                            <View className="bg-red-100 p-4 rounded-full mb-4">
+                                <Ionicons name="log-out" size={28} color="#FF4444" />
+                            </View>
+                            <Text className="text-xl font-bold text-gray-900 mb-3">Logout</Text>
+                            <Text className="text-gray-600 text-center">
+                                Are you sure you want to logout from your account?
+                            </Text>
+                        </View>
+                        <View className="flex-row space-x-4 mt-2">
+                            <TouchableOpacity
+                                className="flex-1 bg-gray-100 p-3 rounded-xl"
+                                onPress={() => setShowLogoutConfirm(false)}
+                            >
+                                <Text className="text-gray-700 text-center font-medium">Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                className="flex-1 bg-red-500 p-3 rounded-xl"
+                                onPress={handleLogout}
+                            >
+                                <Text className="text-white text-center font-medium">Logout</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -187,249 +379,3 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onGoBack }) => {
 };
 
 export default ProfileScreen;
-
-const styles = StyleSheet.create({
-    // Styles
-    safeArea: {
-        flex: 1,
-        backgroundColor: "#F8F9FA",
-    },
-    container: {
-        flex: 1,
-    },
-    contentContainer: {
-        paddingBottom: 100,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 20,
-        backgroundColor: '#FFFFFF',
-        ...Platform.select({
-            ios: {
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 3,
-            },
-            android: {
-                elevation: 2,
-            },
-        }),
-    },
-    backButton: {
-        padding: 5,
-    },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#1A237E',
-    },
-    editButton: {
-        backgroundColor: '#4A90E2',
-        paddingHorizontal: 15,
-        paddingVertical: 8,
-        borderRadius: 8,
-    },
-    editButtonText: {
-        color: '#FFFFFF',
-        fontWeight: '500',
-    },
-    profileImageSection: {
-        alignItems: 'center',
-        paddingVertical: 20,
-    },
-    imageContainer: {
-        position: 'relative',
-    },
-    profileImage: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-    },
-    profileImagePlaceholder: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        backgroundColor: '#E3F2FD',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    editImageButton: {
-        position: 'absolute',
-        bottom: 0,
-        right: 0,
-        backgroundColor: '#4A90E2',
-        padding: 8,
-        borderRadius: 20,
-    },
-    formContainer: {
-        padding: 20,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        margin: 20,
-        ...Platform.select({
-            ios: {
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 3,
-            },
-            android: {
-                elevation: 2,
-            },
-        }),
-    },
-    inputContainer: {
-        marginBottom: 20,
-    },
-    inputLabel: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 8,
-        fontWeight: '500',
-    },
-    inputWrapper: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        backgroundColor: '#FFFFFF',
-    },
-    inputError: {
-        borderColor: '#FF4444',
-    },
-    inputIcon: {
-        marginRight: 10,
-    },
-    input: {
-        flex: 1,
-        paddingVertical: 12,
-        fontSize: 16,
-        color: '#333',
-    },
-    errorText: {
-        color: '#FF4444',
-        fontSize: 12,
-        marginTop: 4,
-    },
-    quickActions: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-        padding: 20,
-        backgroundColor: '#FFFFFF',
-        marginHorizontal: 20,
-        borderRadius: 12,
-        ...Platform.select({
-            ios: {
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 3,
-            },
-            android: {
-                elevation: 2,
-            },
-        }),
-    },
-    actionButton: {
-        alignItems: "center",
-    },
-    actionIcon: {
-        width: 50,
-        height: 50,
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    actionText: {
-        color: "#333",
-        fontSize: 12,
-        fontWeight: '500',
-    },
-    logoutButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#FFE5E5',
-        margin: 20,
-        padding: 15,
-        borderRadius: 12,
-    },
-    logoutText: {
-        color: '#FF4444',
-        fontSize: 16,
-        fontWeight: '500',
-        marginLeft: 8,
-    },
-    bottomSpacing: {
-        height: 80,
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalContent: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 20,
-        width: '80%',
-        alignItems: 'center',
-        ...Platform.select({
-            ios: {
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-            },
-            android: {
-                elevation: 4,
-            },
-        }),
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1A237E',
-        marginBottom: 10,
-    },
-    modalText: {
-        fontSize: 16,
-        color: '#666',
-        marginBottom: 20,
-        textAlign: 'center',
-    },
-    modalButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        width: '100%',
-    },
-    modalButton: {
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 8,
-        marginHorizontal: 5,
-    },
-    cancelButton: {
-        backgroundColor: '#F5F5F5',
-    },
-    confirmButton: {
-        backgroundColor: '#FF4444',
-    },
-    cancelButtonText: {
-        color: '#666',
-        textAlign: 'center',
-        fontWeight: '500',
-    },
-    confirmButtonText: {
-        color: '#FFFFFF',
-        textAlign: 'center',
-        fontWeight: '500',
-    },
-});
