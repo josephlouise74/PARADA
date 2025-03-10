@@ -169,182 +169,173 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onGoBack }) => {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-gray-800">
-            <View className="flex-1 bg-gray-100">
-                <StatusBar barStyle="light-content" backgroundColor="#ffffff" />
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                    className="flex-1"
-                >
-                    <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} className="flex-1">
-                        <View className="mb-4">
-                            <Header
-                                onGoBack={onGoBack}
-                                isEditMode={isEditMode}
-                                onEdit={() => setIsEditMode(true)}
-                                onCancel={handleCancelEdit}
-                                onSave={handleSubmit(onSubmit)}
-                                isLoading={isLoading}
-                                isDirty={isDirty}
-                            />
-                        </View>
-                        <View className="mb-4">
-                            <ProfileImage
-                                imageUri={profileImage}
-                                onPickImage={pickImage}
-                                isEditMode={isEditMode}
-                            />
-                        </View>
-                        <View className="mb-4">
-                            <PersonalInfoForm
-                                control={control}
-                                errors={errors}
-                                userLocation={userLocation}
-                                isEditMode={isEditMode}
-                            />
-                        </View>
-                        <View className="mb-4">
-                            <AccountActions onLogout={() => setShowLogoutConfirm(true)} />
-                        </View>
-                    </ScrollView>
-                </KeyboardAvoidingView>
-                <LogoutModal
-                    visible={showLogoutConfirm}
-                    onCancel={() => setShowLogoutConfirm(false)}
-                    onLogout={handleLogout}
-                />
-            </View>
-        </SafeAreaView>
+        <SafeAreaView className="flex-1 min-h-screen bg-gray-100">
+            <StatusBar style="dark" backgroundColor="#F3F4F6" />
 
-    );
-};
-
-type HeaderProps = {
-    onGoBack: () => void;
-    isEditMode: boolean;
-    onEdit: () => void;
-    onCancel: () => void;
-    onSave: () => void;
-    isLoading: boolean;
-    isDirty: boolean;
-};
-
-const Header = ({
-    onGoBack,
-    isEditMode,
-    onEdit,
-    onCancel,
-    onSave,
-    isLoading,
-    isDirty,
-}: HeaderProps) => {
-    return (
-        <View className="flex-row items-center justify-between bg-white px-4 py-3 rounded-lg mb-6">
-            <TouchableOpacity onPress={onGoBack} className="p-2">
-                <Ionicons name="arrow-back" size={26} color="#1E40AF" />
-            </TouchableOpacity>
-            <Text className="text-xl font-semibold text-gray-800 flex-1 text-center">
-                Profile Settings
-            </Text>
-            {isEditMode ? (
-                <View className="flex-row space-x-3">
-                    <TouchableOpacity onPress={onCancel} className="px-3 py-2">
-                        <Text className="text-gray-600 font-medium">Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={onSave}
-                        disabled={isLoading || !isDirty}
-                        className={`px-4 py-2 rounded-lg ${isLoading || !isDirty ? 'bg-gray-400' : 'bg-blue-600'
-                            }`}
-                    >
-                        <Text className="text-white font-medium">
-                            {isLoading ? 'Saving...' : 'Save'}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-            ) : (
-                <TouchableOpacity onPress={onEdit} className="bg-blue-600 px-4 py-2 rounded-lg">
-                    <Text className="text-white font-medium">Edit</Text>
-                </TouchableOpacity>
-            )}
-        </View>
-    );
-};
-
-type ProfileImageProps = {
-    imageUri: string | null;
-    onPickImage: () => void;
-    isEditMode: boolean;
-};
-
-const ProfileImage: React.FC<ProfileImageProps> = ({ imageUri, onPickImage, isEditMode }) => {
-    return (
-        <View className="items-center mb-8">
-            <TouchableOpacity onPress={onPickImage} disabled={!isEditMode} className="relative">
-                <View className="h-32 w-32 rounded-full bg-white overflow-hidden border-4 border-blue-600 ">
-                    {imageUri ? (
-                        <Image source={{ uri: imageUri }} className="h-32 w-32" resizeMode="cover" />
-                    ) : (
-                        <View className="h-32 w-32 bg-gray-200 items-center justify-center">
-                            <Ionicons name="person" size={60} color="#6B7280" />
-                        </View>
-                    )}
-                </View>
-                {isEditMode && (
-                    <View className="absolute bottom-0 right-0 bg-blue-600 p-2 rounded-full border-2 border-white ">
-                        <Ionicons name="camera" size={18} color="white" />
+            {/* Main Container */}
+            <View className="flex-1">
+                {/* Header Section - Fixed at top */}
+                <View className="bg-white px-4 py-3 shadow-sm">
+                    <View className="flex-row items-center justify-between">
+                        <TouchableOpacity
+                            onPress={onGoBack}
+                            className="w-10 h-10 bg-blue-50 rounded-full items-center justify-center"
+                        >
+                            <Ionicons name="arrow-back" size={24} color="#1D4ED8" />
+                        </TouchableOpacity>
+                        <Text className="text-xl font-bold text-gray-800">My Profile</Text>
+                        {isEditMode ? (
+                            <View className="flex-row space-x-3">
+                                <TouchableOpacity
+                                    onPress={handleCancelEdit}
+                                    className="px-4 py-2 bg-gray-100 rounded-full"
+                                >
+                                    <Text className="text-gray-600 font-medium">Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={handleSubmit(onSubmit)}
+                                    disabled={isLoading || !isDirty}
+                                    className={`px-4 py-2 rounded-full ${isLoading || !isDirty ? 'bg-blue-300' : 'bg-blue-600'
+                                        }`}
+                                >
+                                    <Text className="text-white font-medium">
+                                        {isLoading ? 'Saving...' : 'Save'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <TouchableOpacity
+                                onPress={() => setIsEditMode(true)}
+                                className="px-4 py-2 bg-blue-600 rounded-full"
+                            >
+                                <Text className="text-white font-medium">Edit Profile</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
-                )}
-            </TouchableOpacity>
-            {isEditMode && (
-                <Text className="text-blue-600 text-sm mt-2 font-medium">Change Photo</Text>
-            )}
-        </View>
+                </View>
+
+                {/* Scrollable Content */}
+                <ScrollView
+                    className="flex-1"
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 40 }}
+                >
+                    {/* Profile Image Section */}
+                    <View className="bg-white mt-4 mx-4 p-6 rounded-3xl shadow-sm">
+                        <TouchableOpacity
+                            onPress={pickImage}
+                            disabled={!isEditMode}
+                            className="items-center"
+                        >
+                            <View className="relative">
+                                <View className="h-32 w-32 rounded-full bg-blue-50 border-4 border-blue-600 overflow-hidden">
+                                    {profileImage ? (
+                                        <Image
+                                            source={{ uri: profileImage }}
+                                            className="h-32 w-32"
+                                            resizeMode="cover"
+                                        />
+                                    ) : (
+                                        <View className="h-32 w-32 items-center justify-center">
+                                            <Ionicons name="person" size={64} color="#1D4ED8" />
+                                        </View>
+                                    )}
+                                </View>
+                                {isEditMode && (
+                                    <View className="absolute bottom-0 right-0 bg-blue-600 p-2 rounded-full shadow-lg">
+                                        <Ionicons name="camera" size={20} color="white" />
+                                    </View>
+                                )}
+                            </View>
+                            {isEditMode && (
+                                <Text className="text-blue-600 text-sm mt-4 font-medium">
+                                    Change Profile Photo
+                                </Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Personal Info Section */}
+                    <View className="bg-white mt-4 mx-4 p-6 rounded-3xl shadow-sm">
+                        <Text className="text-xl font-bold text-gray-800 mb-6">
+                            Personal Information
+                        </Text>
+                        <PersonalInfoForm
+                            control={control}
+                            errors={errors}
+                            userLocation={userLocation}
+                            isEditMode={isEditMode}
+                        />
+                    </View>
+
+                    {/* Account Settings Section */}
+                    <View className="bg-white mt-4 mx-4 p-6 rounded-3xl shadow-sm mb-4">
+                        <Text className="text-xl font-bold text-gray-800 mb-6">
+                            Account Settings
+                        </Text>
+                        <TouchableOpacity
+                            className="flex-row items-center py-4 px-2 bg-gray-50 rounded-2xl mb-3"
+                            onPress={() => Alert.alert('Change Password', 'Feature coming soon')}
+                        >
+                            <View className="w-12 h-12 bg-blue-100 rounded-full items-center justify-center">
+                                <Ionicons name="key-outline" size={24} color="#1D4ED8" />
+                            </View>
+                            <Text className="flex-1 ml-4 text-gray-800 font-medium">
+                                Change Password
+                            </Text>
+                            <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            className="flex-row items-center py-4 px-2 bg-red-50 rounded-2xl"
+                            onPress={() => setShowLogoutConfirm(true)}
+                        >
+                            <View className="w-12 h-12 bg-red-100 rounded-full items-center justify-center">
+                                <Ionicons name="log-out-outline" size={24} color="#DC2626" />
+                            </View>
+                            <Text className="flex-1 ml-4 text-red-600 font-medium">
+                                Logout
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </ScrollView>
+            </View>
+
+            {/* Logout Modal */}
+            <LogoutModal
+                visible={showLogoutConfirm}
+                onCancel={() => setShowLogoutConfirm(false)}
+                onLogout={handleLogout}
+            />
+        </SafeAreaView>
     );
 };
 
-type PersonalInfoFormProps = {
-    control: any;
-    errors: any;
-    userLocation: string;
-    isEditMode: boolean;
-};
-
+// Update PersonalInfoForm component
 const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
     control,
     errors,
     userLocation,
     isEditMode,
 }) => {
-    const FormField = ({
-        name,
-        label,
-        icon,
-        placeholder,
-        keyboardType = 'default',
-        editable = true,
-    }: {
-        name: keyof ProfileFormData;
-        label: string;
-        icon: keyof typeof Ionicons.glyphMap;
-        placeholder: string;
-        keyboardType?: any;
-        editable?: boolean;
-    }) => (
+    const FormField = ({ name, label, icon, placeholder, keyboardType = 'default', editable = true }) => (
         <Controller
             control={control}
             name={name}
             render={({ field: { onChange, onBlur, value } }) => (
-                <View className="mb-5">
-                    <Text className="text-sm font-medium text-gray-700 mb-1">{label}</Text>
+                <View className="mb-6">
+                    <Text className="text-sm font-medium text-gray-700 mb-2 ml-1">
+                        {label}
+                    </Text>
                     <View
-                        className={`flex-row items-center border ${errors[name] ? 'border-red-500' : 'border-gray-300'
-                            } bg-gray-50 px-4 py-3 rounded-lg ${!isEditMode || !editable ? 'opacity-70' : ''
-                            }`}
+                        className={`flex-row items-center bg-gray-50 rounded-2xl px-4 py-3 ${errors[name] ? 'border-2 border-red-500' : ''
+                            } ${!isEditMode || !editable ? 'opacity-70' : ''}`}
                     >
-                        <Ionicons name={icon} size={22} color="#2563EB" />
+                        <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
+                            <Ionicons name={icon} size={20} color="#1D4ED8" />
+                        </View>
                         <TextInput
-                            className="flex-1 ml-3 text-base text-gray-800"
+                            className="flex-1 text-base text-gray-800"
                             onChangeText={onChange}
                             onBlur={onBlur}
                             value={value}
@@ -352,12 +343,13 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
                             placeholderTextColor="#9CA3AF"
                             editable={isEditMode && editable}
                             keyboardType={keyboardType}
-                            autoCapitalize={name === 'email' || name === 'username' ? 'none' : 'words'}
-                            autoCorrect={false}
+                            autoCapitalize={name === 'email' ? 'none' : 'words'}
                         />
                     </View>
                     {errors[name] && (
-                        <Text className="text-red-500 text-xs mt-1">{errors[name]?.message}</Text>
+                        <Text className="text-red-500 text-xs mt-1 ml-1">
+                            {errors[name]?.message}
+                        </Text>
                     )}
                 </View>
             )}
@@ -365,28 +357,37 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
     );
 
     return (
-        <View className="bg-white p-6 rounded-lg  mb-6 ">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Personal Information</Text>
-            <FormField name="fullName" label="Full Name" icon="person" placeholder="Enter your full name" />
+        <View>
+            <FormField
+                name="fullName"
+                label="Full Name"
+                icon="person-outline"
+                placeholder="Enter your full name"
+            />
             <FormField
                 name="email"
                 label="Email Address"
-                icon="mail"
+                icon="mail-outline"
                 placeholder="Enter your email"
                 keyboardType="email-address"
             />
             <FormField
                 name="phone"
                 label="Phone Number"
-                icon="call"
+                icon="call-outline"
                 placeholder="Enter your phone number"
                 keyboardType="phone-pad"
             />
-            <FormField name="username" label="Username" icon="at" placeholder="Enter your username" />
+            <FormField
+                name="username"
+                label="Username"
+                icon="at"
+                placeholder="Enter your username"
+            />
             <FormField
                 name="location"
                 label="Current Location"
-                icon="location"
+                icon="location-outline"
                 placeholder={userLocation || 'Detecting location...'}
                 editable={false}
             />

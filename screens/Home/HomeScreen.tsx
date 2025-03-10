@@ -29,46 +29,33 @@ interface Trip {
     id: string;
     name: string;
     vehicleId: string;
-    seatsAvailable: number;
     price: string;
-    departure: string;
-    arrival: string;
-    stops: string[];
+    distance: string;
+    estimatedTime: string;
+    routes: string[];
     type: string;
 }
 
-// Dummy data for EJeep vehicles and trips
-const dummyEjeepVehicles: Vehicle[] = [
-    {
-        id: '1',
-        type: 'EJeep',
-        route: 'Jeepney Route 1',
-        latitude: 14.6020,
-        longitude: 120.9850,
-    },
-];
-
+// Updated dummy data
 const dummyEjeepTrips: Trip[] = [
     {
         id: 't1',
-        name: 'Manila to Makati',
+        name: 'Balamban to Toledo',
         vehicleId: '1',
-        seatsAvailable: 10,
-        price: 'PHP 20',
-        departure: '08:00 AM',
-        arrival: '08:30 AM',
-        stops: ['Manila', 'Ermita', 'Makati'],
+        price: 'PHP 50',
+        distance: '45 km',
+        estimatedTime: '1h 30min',
+        routes: ['Balamban', 'Asturias', 'Aloguinsan', 'Toledo'],
         type: 'EJeep',
     },
     {
         id: 't2',
-        name: 'Manila to Quezon City',
+        name: 'Balamban to Asturias',
         vehicleId: '1',
-        seatsAvailable: 8,
-        price: 'PHP 25',
-        departure: '09:00 AM',
-        arrival: '09:45 AM',
-        stops: ['Manila', 'Cubao', 'Quezon City'],
+        price: 'PHP 35',
+        distance: '25 km',
+        estimatedTime: '45min',
+        routes: ['Balamban', 'Asturias'],
         type: 'EJeep',
     },
 ];
@@ -145,10 +132,10 @@ const HomeScreen = () => {
                     <Header
                         searchQuery={searchQuery}
                         setSearchQuery={setSearchQuery}
-                        onProfilePress={() => setIsProfileVisible(true)}
                     />
                     <ScrollView className="flex-1 mb-16">
-                        <MapSection mapRegion={mapRegion} vehicles={dummyEjeepVehicles} />
+                        <MapSection mapRegion={mapRegion} vehicles={[]} />
+
                         <TripList trips={filteredTrips} onBook={handleBooking} />
                     </ScrollView>
                 </View>
@@ -157,15 +144,14 @@ const HomeScreen = () => {
     );
 };
 
+// Updated Header props and component
 interface HeaderProps {
     searchQuery: string;
     setSearchQuery: (query: string) => void;
-    onProfilePress: () => void;
 }
 
-const Header = ({ searchQuery, setSearchQuery, onProfilePress }: HeaderProps) => {
-    const router = useRouter();
-
+const Header = ({ searchQuery, setSearchQuery }: HeaderProps) => {
+    const router = useRouter()
     return (
         <View className="bg-white shadow p-4">
             <View className="flex-row justify-between items-center">
@@ -232,14 +218,14 @@ interface TripListProps {
     onBook: (trip: Trip) => void;
 }
 
+// Updated TripList component
 const TripList = ({ trips, onBook }: TripListProps) => {
     return (
         <View className="m-4">
-
             <View className="flex-row justify-between items-center mb-4">
                 <View>
-                    <Text className="text-xl font-bold text-gray-800">Available EJeep Trips</Text>
-                    <Text className="text-sm text-gray-500">Find your next ride</Text>
+                    <Text className="text-xl font-bold text-gray-800">Available Routes</Text>
+                    <Text className="text-sm text-gray-500">Find your next destination</Text>
                 </View>
                 <TouchableOpacity className="bg-blue-50 px-4 py-2 rounded-lg">
                     <Text className="text-blue-600 font-medium">See All</Text>
@@ -257,30 +243,20 @@ const TripList = ({ trips, onBook }: TripListProps) => {
                         </View>
                         <View className="ml-4 flex-1">
                             <Text className="text-lg font-bold text-gray-800">{trip.name}</Text>
-                            <Text className="text-sm text-gray-500">Vehicle ID: {trip.vehicleId}</Text>
+                            <Text className="text-sm text-gray-500">{trip.distance} • {trip.estimatedTime}</Text>
                         </View>
                         <View className="items-end">
                             <Text className="text-xl font-bold text-blue-600">{trip.price}</Text>
-                            <Text className="text-green-600 text-sm mt-1">{trip.seatsAvailable} seats left</Text>
                         </View>
                     </View>
                     <View className="bg-gray-50 p-3 rounded-xl mb-3">
-                        <View className="flex-row justify-between items-center">
-                            <View className="flex-row items-center">
-                                <Ionicons name="time-outline" size={18} color="#4B5563" />
-                                <View className="ml-2">
-                                    <Text className="text-sm font-medium text-gray-700">Departure</Text>
-                                    <Text className="text-base text-gray-900">{trip.departure}</Text>
+                        <Text className="text-sm font-medium text-gray-700 mb-2">Route Stops:</Text>
+                        <View className="flex-row flex-wrap gap-2">
+                            {trip.routes.map((stop, index) => (
+                                <View key={index} className="bg-white px-3 py-1 rounded-full border border-gray-200">
+                                    <Text className="text-sm text-gray-600">{stop}</Text>
                                 </View>
-                            </View>
-                            <View className="w-8 h-[1px] bg-gray-300" />
-                            <View className="flex-row items-center">
-                                <View className="mr-2">
-                                    <Text className="text-sm font-medium text-gray-700">Arrival</Text>
-                                    <Text className="text-base text-gray-900">{trip.arrival}</Text>
-                                </View>
-                                <Ionicons name="flag-outline" size={18} color="#4B5563" />
-                            </View>
+                            ))}
                         </View>
                     </View>
                     <TouchableOpacity
